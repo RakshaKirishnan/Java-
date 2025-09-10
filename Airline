@@ -1,0 +1,231 @@
+package javaproject;
+import java.util.*;
+//================= MEMBER BASE CLASS =================
+class Member {
+ protected String memberId;
+ protected String name;
+ protected String email;
+ protected String tier;
+ protected int milesBalance;
+ public Member(String memberId, String name, String email) {
+ this.memberId = memberId;
+ this.name = name;
+ this.email = email;
+ this.tier = "Silver";
+ this.milesBalance = 0;
+ }
+ // --- Getters & Setters ---
+ public String getMemberId() { return memberId; }
+ public String getName() { return name; }
+ public String getEmail() { return email; }
+ public String getTier() { return tier; }
+ public int getMilesBalance() { return milesBalance; }
+ protected void setMilesBalance(int miles) { this.milesBalance = miles; }
+ protected void setTier(String tier) { this.tier = tier; }
+ // --- Credit Miles (Default: no bonus) ---
+ public void creditMiles(int miles) {
+ this.milesBalance += miles;
+ }
+ // --- Evaluate Tier (overridden in subclasses) ---
+ public void evaluateTier() {
+ if (milesBalance > 50000) setTier("Gold");
+ }// --- Redeem ---
+ public void redeem(int milesRequired) {
+ if (milesBalance >= milesRequired) {
+ milesBalance -= milesRequired;
+ System.out.println(name + " redeemed reward successfully!");
+ } else {
+ System.out.println("Insufficient miles for redemption.");
+ }
+ }
+ public void printStatement() {
+ System.out.println("===== Member Statement =====");
+ System.out.println("ID: " + memberId);
+ System.out.println("Name: " + name);
+ System.out.println("Tier: " + tier);
+ System.out.println("Miles: " + milesBalance);
+ }
+}
+//================= SUBCLASSES =================
+class SilverMember extends Member {
+ public SilverMember(String memberId, String name, String email) {
+ super(memberId, name, email);
+ this.tier = "Silver";
+ }
+ @Override
+ public void evaluateTier() {
+ if (milesBalance > 50000) setTier("Gold");
+ }
+}
+class GoldMember extends Member {
+ public GoldMember(String memberId, String name, String email) {
+ super(memberId, name, email);
+ this.tier = "Gold";
+ }
+ @Override
+ public void evaluateTier() {
+ if (milesBalance > 100000) setTier("Platinum");
+ }
+ @Override
+ public void creditMiles(int miles) {
+ this.milesBalance += miles + (int)(miles * 0.25); // +25% bonus}
+}
+class PlatinumMember extends Member {
+ public PlatinumMember(String memberId, String name, String email) {
+ super(memberId, name, email);
+ this.tier = "Platinum";
+ }
+ @Override
+ public void evaluateTier() {
+ // Platinum is top-tier
+ }
+ @Override
+ public void creditMiles(int miles) {
+ this.milesBalance += miles + (int)(miles * 0.50); // +50% bonus
+ }
+}
+//================= FLIGHT ACTIVITY =================
+class FlightActivity {
+ private String activityId;
+ private String flightNo;
+ private String date;
+ private int distance;
+ private String fareClass;
+ private int milesEarned;
+ public FlightActivity(String activityId, String flightNo, String date, int distance, 
+String fareClass) {
+ this.activityId = activityId;
+ this.flightNo = flightNo;
+ this.date = date;
+ this.distance = distance;
+ this.fareClass = fareClass;
+ this.milesEarned = 0;
+ }
+ public int calculateMiles() {
+ milesEarned = fareClass.equalsIgnoreCase("Business") ? (int)(distance * 1.5) : 
+distance;
+ return milesEarned;
+ }public String getFlightNo() { return flightNo; }
+ public int getMilesEarned() { return milesEarned; }
+}
+//================= REWARD =================
+class Reward {
+ protected String rewardId;
+ protected String name;
+ protected int milesRequired;
+ protected boolean available;
+ public Reward(String rewardId, String name, int milesRequired, boolean available) 
+{
+ this.rewardId = rewardId;
+ this.name = name;
+ this.milesRequired = milesRequired;
+ this.available = available;
+ }
+ public boolean isAvailable() { return available; }
+ public int getMilesRequired() { return milesRequired; }
+ public String getName() { return name; }
+ public void redeem(Member member) {
+ if (available && member.getMilesBalance() >= milesRequired) {
+ member.redeem(milesRequired);
+ available = false; // One-time reward
+ System.out.println("Reward " + name + " redeemed.");
+ } else {
+ System.out.println("Reward not available or insufficient miles.");
+ }
+ }
+}
+//================= LOYALTY SERVICE =================
+class LoyaltyService {
+ private List<Member> members = new ArrayList<>();
+ private List<Reward> rewards = new ArrayList<>();
+ public void enroll(Member member) {
+ members.add(member);
+ System.out.println("Enrolled: " + member.getName() + " as " + 
+member.getTier());}
+ public void addFlightActivity(Member member, FlightActivity activity) {
+ int miles = activity.calculateMiles();
+ member.creditMiles(miles);
+ // Evaluate and possibly promote
+ Member upgraded = promoteMember(member);
+ if (upgraded != member) {
+ members.remove(member);
+ members.add(upgraded);
+ System.out.println(member.getName() + " has been upgraded to " + 
+upgraded.getTier() + "!");
+ }
+ System.out.println(upgraded.getName() + " earned " + miles + " miles from flight 
+" + activity.getFlightNo());
+ }
+ // Promotion Logic
+ private Member promoteMember(Member member) {
+ int miles = member.getMilesBalance();
+ if (member instanceof SilverMember && miles > 50000) {
+ Member upgraded = new GoldMember(member.getMemberId(), 
+member.getName(), member.getEmail());
+ upgraded.setMilesBalance(member.getMilesBalance());
+ return upgraded;
+ } 
+ else if (member instanceof GoldMember && miles > 100000) {
+ Member upgraded = new PlatinumMember(member.getMemberId(), 
+member.getName(), member.getEmail());
+ upgraded.setMilesBalance(member.getMilesBalance());
+ return upgraded;
+ }
+ return member; // no change
+ }
+ public void addReward(Reward reward) {
+ rewards.add(reward);
+ }
+ public void redeemReward(Member member, String rewardName) {for (Reward r : rewards) {
+ if (r.getName().equalsIgnoreCase(rewardName)) {
+ r.redeem(member);
+ return;
+ }
+ }
+ System.out.println("Reward not found.");
+ }
+ public void printAllStatements() {
+ for (Member m : members) {
+ m.printStatement();
+ }
+ }
+ public void tierDistributionSummary() {
+ Map<String, Integer> summary = new HashMap<>();
+ for (Member m : members) {
+ summary.put(m.getTier(), summary.getOrDefault(m.getTier(), 0) + 1);
+ }
+ System.out.println("===== Tier Distribution =====");
+ for (String tier : summary.keySet()) {
+ System.out.println(tier + ": " + summary.get(tier));
+ }
+ }
+}
+//================= MAIN APP =================
+public class LoyaltyAppMain {
+ public static void main(String[] args) {
+ LoyaltyService service = new LoyaltyService();
+ // Enroll Members
+ Member m1 = new SilverMember("M001", "Rahul", "rahul@email.com");
+ Member m2 = new GoldMember("M002", "Navin", "navin@email.com");
+ service.enroll(m1);
+ service.enroll(m2);
+ // Add Flight Activities
+ FlightActivity f1 = new FlightActivity("A001", "AI101", "2025-09-01", 1200, 
+"Economy");
+ FlightActivity f2 = new FlightActivity("A002", "AI202", "2025-09-05", 2500, 
+"Business");service.addFlightActivity(m1, f1);
+ service.addFlightActivity(m2, f2);
+ // Add Rewards
+ Reward r1 = new Reward("R001", "Free Flight", 5000, true);
+ Reward r2 = new Reward("R002", "Business Upgrade", 8000, true);
+ service.addReward(r1);
+ service.addReward(r2);
+ // Redeem Reward
+ service.redeemReward(m1, "Free Flight");
+ service.redeemReward(m2, "Business Upgrade");
+ // Print Statements
+ service.printAllStatements();
+ // Tier Distribution
+ service.tierDistributionSummary();
+ }
+}
